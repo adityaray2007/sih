@@ -41,21 +41,66 @@ export default function QuizzesPage() {
     }
   }
 
-  const handleSubmit = (quiz: Quiz) => {
+  const handleSubmit = async (quiz: Quiz) => {
     const selected = selectedOptions[quiz._id]
     if (selected === undefined) {
       alert('Please select an option')
       return
     }
-    const correct = selected === quiz.correctAnswer
     
-    setSubmittedQuizzes({ ...submittedQuizzes, [quiz._id]: true })
-    setQuizResults({ 
-      ...quizResults, 
-      [quiz._id]: { correct, selectedOption: selected } 
-    })
-    
-    alert(correct ? 'Correct! 🎉' : `Incorrect! The correct answer is Option ${quiz.correctAnswer + 1}`)
+    try {
+      // Get JWT token from localStorage
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('Please log in to submit quiz answers')
+        return
+      }
+
+      // Send answer to API for XP awarding
+      const response = await fetch('/api/quizzes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          quizId: quiz._id,
+          selectedOption: selected
+        })
+      })
+
+      const result = await response.json()
+      
+      if (response.ok) {
+        const correct = result.correct
+        const xpAwarded = result.xp
+        const wasXpAwarded = result.xpAwarded
+        const alreadyCompleted = result.alreadyCompleted
+        
+        setSubmittedQuizzes({ ...submittedQuizzes, [quiz._id]: true })
+        setQuizResults({ 
+          ...quizResults, 
+          [quiz._id]: { correct, selectedOption: selected } 
+        })
+        
+        if (correct) {
+          if (wasXpAwarded) {
+            alert(`Correct! 🎉 You earned 10 XP! Total XP: ${xpAwarded}`)
+          } else if (alreadyCompleted) {
+            alert(`Correct! ✅ (You already completed this quiz, no XP awarded)`)
+          } else {
+            alert(`Correct! 🎉 Total XP: ${xpAwarded}`)
+          }
+        } else {
+          alert(`Incorrect! The correct answer is Option ${quiz.correctAnswer + 1}`)
+        }
+      } else {
+        alert(`Error: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error submitting quiz:', error)
+      alert('Error submitting quiz. Please try again.')
+    }
   }
 
   const resetQuiz = (quizId: string) => {

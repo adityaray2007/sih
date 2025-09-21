@@ -23,12 +23,13 @@ export async function GET(request: NextRequest) {
     .select('title startTime endTime')
     .lean()
 
+    // Transform alerts to drills format
     const drills = upcomingAlerts.map(alert => ({
       title: alert.title,
-      due: alert.startTime.toISOString().split('T')[0] // Use start time as due date
+      due: alert.startTime.toISOString() // Use full ISO string for proper date handling
     }))
 
-    return NextResponse.json(drills)
+    return NextResponse.json(drills || [])
   } catch (error) {
     console.error('Error fetching drills data:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

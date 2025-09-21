@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
 import TopBar from './components/Topbar'
 import CompletionBar from './components/CompletionBar'
-import ModulesGraph from './components/ModulesGraph'
 import UpcomingDrills from './components/UpcomingDrills'
 import ProfileCard from './components/ProfileCard'
 import dynamic from 'next/dynamic'
@@ -42,7 +41,9 @@ export default function DashboardPage() {
   const [drills, setDrills] = useState<{ title: string; due: string }[]>([])
   const [xp, setXp] = useState(0)
   const [timeSpentData, setTimeSpentData] = useState<number[]>([])
+  const [timeSpentDetails, setTimeSpentDetails] = useState<{ moduleName: string; timeSpent: number }[]>([])
   const [topStudents, setTopStudents] = useState<{ name: string; xp: number }[]>([])
+  const [userRank, setUserRank] = useState<{ rank: number; totalStudents: number; userXp: number } | null>(null)
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -63,6 +64,36 @@ export default function DashboardPage() {
             timeSpentPerModule: []
           }
           setUser(demoUser)
+          
+          // For demo user, set a demo rank
+          setUserRank({
+            rank: 3,
+            totalStudents: 25,
+            userXp: 1500
+          })
+          
+          // For demo user, set demo drills data
+          setDrills([
+            {
+              title: "Fire Safety Drill",
+              due: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString() // 2 days from now
+            },
+            {
+              title: "Emergency Evacuation Practice",
+              due: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString() // 5 days from now
+            }
+          ])
+          
+          // For demo user, set demo time spent data
+          setTimeSpentData([45, 30, 60, 25, 40])
+          setTimeSpentDetails([
+            { moduleName: "Fire Safety Basics", timeSpent: 45 },
+            { moduleName: "Emergency Procedures", timeSpent: 30 },
+            { moduleName: "Equipment Training", timeSpent: 60 },
+            { moduleName: "Evacuation Routes", timeSpent: 25 },
+            { moduleName: "Communication Protocols", timeSpent: 40 }
+          ])
+          
           setLoading(false)
           return
         }
@@ -89,12 +120,19 @@ export default function DashboardPage() {
           const xpData = await xpRes.json()
           setXp(xpData.totalXp || 0)
           setTimeSpentData(xpData.timeSpentPerModule || [])
+          setTimeSpentDetails(xpData.timeSpentData || [])
         }
 
         const topRes = await fetch(`/api/dashboard/top-students`)
         if (topRes.ok) {
           const topData = await topRes.json()
           setTopStudents(topData || [])
+        }
+
+        const rankRes = await fetch(`/api/dashboard/rank?userId=${userData.id}`)
+        if (rankRes.ok) {
+          const rankData = await rankRes.json()
+          setUserRank(rankData)
         }
       } catch (err) {
         console.error('Error fetching dashboard data:', err)
@@ -127,7 +165,9 @@ export default function DashboardPage() {
     switch (activeTab) {
       case 'Dashboard':
         const timeChartData = {
-          labels: Array.from({ length: timeSpentData.length }, (_, i) => `Module ${i + 1}`),
+          labels: timeSpentDetails.length > 0 
+            ? timeSpentDetails.map(item => item.moduleName)
+            : Array.from({ length: timeSpentData.length }, (_, i) => `Module ${i + 1}`),
           datasets: [
             {
               label: 'Time Spent (minutes)',
@@ -261,8 +301,12 @@ export default function DashboardPage() {
                       <span className="text-yellow-600 text-lg">🏆</span>
                     </div>
                   </div>
-                  <p className="text-3xl font-bold text-gray-800 mb-2">#3</p>
-                  <p className="text-sm text-gray-500">Class Ranking</p>
+                  <p className="text-3xl font-bold text-gray-800 mb-2">
+                    {userRank ? `#${userRank.rank}` : '--'}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {userRank ? `of ${userRank.totalStudents} students` : 'Class Ranking'}
+                  </p>
                 </div>
               </div>
 
@@ -337,12 +381,6 @@ export default function DashboardPage() {
                   <span className="text-sm text-red-600 font-medium cursor-pointer hover:text-red-700">View all alerts</span>
                 </div>
                 <UpcomingDrills drills={drills} />
-              </div>
-
-              {/* Modules Graph */}
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-red-100">
-                <h3 className="text-xl font-bold text-gray-800 mb-6">Module Progress Overview</h3>
-                <ModulesGraph completed={completedModules} total={totalModules} />
               </div>
             </div>
           </div>

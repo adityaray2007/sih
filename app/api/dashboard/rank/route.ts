@@ -13,29 +13,34 @@ export async function GET(request: NextRequest) {
 
     await connectToDatabase()
 
-    // Get user's total XP and time spent per module
+    // Get the user's XP
     const user = await User.findById(userId)
     
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const totalXp = user.xp || 0
-    const timeSpentPerModule = user.completedModules?.map((module: { timeSpent: number }) => module.timeSpent) || []
-    
-    // Create detailed time spent data with module names
-    const timeSpentData = timeSpentPerModule.map((timeSpent: number, index: number) => ({
-      moduleName: `Module ${index + 1}`,
-      timeSpent: timeSpent || 0
-    }))
+    const userXp = user.xp || 0
+
+    // Count how many users have more XP than this user
+    const usersWithHigherXp = await User.countDocuments({ 
+      xp: { $gt: userXp },
+      role: 'student' // Only count students in ranking
+    })
+
+    // The rank is the number of users with higher XP + 1
+    const rank = usersWithHigherXp + 1
+
+    // Get total number of students for context
+    const totalStudents = await User.countDocuments({ role: 'student' })
 
     return NextResponse.json({
-      totalXp,
-      timeSpentPerModule,
-      timeSpentData
+      rank,
+      totalStudents,
+      userXp
     })
   } catch (error) {
-    console.error('Error fetching XP data:', error)
+    console.error('Error calculating user rank:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

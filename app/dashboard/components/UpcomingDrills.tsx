@@ -43,6 +43,19 @@ export default function UpcomingDrills({ drills }: Props) {
             <p className="text-xs text-gray-500">
               {new Date(alert.due).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </p>
+            <p className="text-xs text-gray-400">
+              {(() => {
+                const now = new Date()
+                const dueDate = new Date(alert.due)
+                const diffTime = dueDate.getTime() - now.getTime()
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                
+                if (diffDays === 0) return 'Today'
+                if (diffDays === 1) return 'Tomorrow'
+                if (diffDays > 1) return `In ${diffDays} days`
+                return 'Overdue'
+              })()}
+            </p>
           </div>
         </div>
       ))}

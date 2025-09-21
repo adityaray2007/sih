@@ -19,8 +19,8 @@ export async function POST(req: Request) {
     await connectToDatabase()
     // Parse body
     const body = await req.json()
-    const { quizId, selectedOption, questionIndex } = body
-    if (!quizId || typeof questionIndex !== 'number' || typeof selectedOption === 'undefined') {
+    const { quizId, selectedOption } = body
+    if (!quizId || typeof selectedOption === 'undefined') {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     } catch (err) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
-    const userId = decoded.id
+    const userId = decoded.userId || decoded.id
     // Find user
     const user = await User.findById(userId)
     if (!user) {
@@ -47,19 +47,35 @@ export async function POST(req: Request) {
     if (!quiz) {
       return NextResponse.json({ error: 'Quiz not found' }, { status: 404 })
     }
-    // Check answer
-    const question = quiz.questions?.[questionIndex]
-    if (!question) {
-      return NextResponse.json({ error: 'Question not found' }, { status: 404 })
-    }
-    const isCorrect = question.correctOption === selectedOption
+    // Check answer - using the correct field from the Quiz model
+    const isCorrect = quiz.correctAnswer === selectedOption
     let updatedXp = user.xp
+    let xpAwarded = false
+    
     if (isCorrect) {
-      user.xp += 10
-      await user.save()
-      updatedXp = user.xp
+      // Check if user has already completed this quiz
+      if (!user.completedQuizzes) {
+        user.completedQuizzes = []
+      }
+      
+      if (!user.completedQuizzes.includes(quiz._id)) {
+        user.xp += 10
+        user.completedQuizzes.push(quiz._id)
+        await user.save()
+        updatedXp = user.xp
+        xpAwarded = true
+      } else {
+        // User already completed this quiz, no XP awarded
+        updatedXp = user.xp
+      }
     }
-    return NextResponse.json({ correct: isCorrect, xp: isCorrect ? updatedXp : undefined })
+    
+    return NextResponse.json({ 
+      correct: isCorrect, 
+      xp: isCorrect ? updatedXp : undefined,
+      xpAwarded: xpAwarded,
+      alreadyCompleted: isCorrect && !xpAwarded
+    })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

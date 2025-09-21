@@ -12,6 +12,7 @@ export interface IUser extends Document {
     moduleId: mongoose.Types.ObjectId
     timeSpent: number // in minutes
   }[]
+  completedQuizzes: mongoose.Types.ObjectId[]
   xp: number
 }
 
@@ -29,6 +30,7 @@ const UserSchema: Schema = new Schema({
       timeSpent: { type: Number, default: 0 } // in minutes
     }
   ],
+  completedQuizzes: [{ type: Schema.Types.ObjectId, ref: 'Quiz' }],
   xp: { type: Number, default: 0 }
 })
 
