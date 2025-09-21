@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface User {
   id: string
@@ -21,6 +21,19 @@ interface TopBarProps {
 export default function TopBar({ currentPage, user }: TopBarProps) {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [localUser, setLocalUser] = useState<User | null>(null)
+
+  useEffect(() => {
+    // Get user data from localStorage
+    const userFromStorage = localStorage.getItem('user')
+    if (userFromStorage) {
+      const userData = JSON.parse(userFromStorage)
+      setLocalUser(userData)
+    }
+  }, [])
+
+  // Use localUser if available, otherwise fall back to prop
+  const currentUser = localUser || user
 
   const getUserRoleDisplay = (role: string) => {
     switch (role) {
@@ -152,15 +165,15 @@ export default function TopBar({ currentPage, user }: TopBarProps) {
             >
               <div className="w-10 h-10 bg-gradient-to-r from-red-400 to-red-500 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-sm">
-                  {user ? getUserInitials(user.name) : 'U'}
+                  {currentUser ? getUserInitials(currentUser.name) : 'U'}
                 </span>
               </div>
               <div className="hidden md:block text-left">
                 <p className="font-semibold text-gray-800 text-sm">
-                  {user?.name || 'Loading...'}
+                  {currentUser?.name || 'Loading...'}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {user ? getUserRoleDisplay(user.role) : 'Loading...'}
+                  {currentUser ? getUserRoleDisplay(currentUser.role) : 'Loading...'}
                 </p>
               </div>
               <span className="text-gray-400 text-sm">⌄</span>
@@ -173,15 +186,15 @@ export default function TopBar({ currentPage, user }: TopBarProps) {
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-gradient-to-r from-red-400 to-red-500 rounded-full flex items-center justify-center">
                       <span className="text-white font-bold">
-                        {user ? getUserInitials(user.name) : 'U'}
+                        {currentUser ? getUserInitials(currentUser.name) : 'U'}
                       </span>
                     </div>
                     <div>
                       <p className="font-semibold text-gray-800">
-                        {user?.name || 'Loading...'}
+                        {currentUser?.name || 'Loading...'}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {user?.email || 'Loading...'}
+                        {currentUser?.email || 'Loading...'}
                       </p>
                     </div>
                   </div>

@@ -27,6 +27,8 @@ export default function ModulePage() {
   const [markingComplete, setMarkingComplete] = useState(false)
   const [currentContentIndex, setCurrentContentIndex] = useState(0)
   const [readingProgress, setReadingProgress] = useState(0)
+  const [isSpeaking, setIsSpeaking] = useState(false)
+  const [speechRate, setSpeechRate] = useState(1)
   const activeTab = "modules"
 
   useEffect(() => {
@@ -55,6 +57,23 @@ export default function ModulePage() {
 
     fetchModule()
   }, [id])
+
+  // Cleanup speech when component unmounts or content changes
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel()
+      }
+    }
+  }, [])
+
+  // Stop speech when content changes
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+      setIsSpeaking(false)
+    }
+  }, [currentContentIndex])
 
 
 
@@ -106,6 +125,45 @@ export default function ModulePage() {
   const prevContent = () => {
     if (currentContentIndex > 0) {
       setCurrentContentIndex(currentContentIndex - 1)
+    }
+  }
+
+  // Text-to-Speech Functions
+  const speakText = (text: string) => {
+    if ('speechSynthesis' in window) {
+      // Stop any current speech
+      window.speechSynthesis.cancel()
+      
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.rate = speechRate
+      utterance.pitch = 1
+      utterance.volume = 1
+      
+      utterance.onstart = () => setIsSpeaking(true)
+      utterance.onend = () => setIsSpeaking(false)
+      utterance.onerror = () => setIsSpeaking(false)
+      
+      window.speechSynthesis.speak(utterance)
+    }
+  }
+
+  const stopSpeaking = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+      setIsSpeaking(false)
+    }
+  }
+
+  const toggleSpeaking = () => {
+    if (isSpeaking) {
+      stopSpeaking()
+    } else {
+      const textContent = currentContent?.data || ''
+      // Remove HTML tags for clean text
+      const cleanText = textContent.replace(/<[^>]*>/g, '')
+      if (cleanText.trim()) {
+        speakText(cleanText)
+      }
     }
   }
 
@@ -254,10 +312,55 @@ export default function ModulePage() {
               />
             </div>
           ) : currentContent.type === 'text' ? (
-            <div 
-              className="prose prose-lg max-w-none text-gray-700 leading-relaxed text-lg"
-              dangerouslySetInnerHTML={{ __html: currentContent.data }}
-            />
+            <div>
+              {/* TTS Controls */}
+              <div className="mb-4 flex items-center justify-between bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={toggleSpeaking}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                      isSpeaking 
+                        ? 'bg-red-500 text-white hover:bg-red-600' 
+                        : 'bg-red-100 text-red-700 hover:bg-red-200'
+                    }`}
+                  >
+                    <span className="text-lg">
+                      {isSpeaking ? '⏸️' : '🔊'}
+                    </span>
+                    <span>{isSpeaking ? 'Pause' : 'Listen'}</span>
+                  </button>
+                  
+                  {isSpeaking && (
+                    <button
+                      onClick={stopSpeaking}
+                      className="flex items-center space-x-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all"
+                    >
+                      <span className="text-lg">⏹️</span>
+                      <span>Stop</span>
+                    </button>
+                  )}
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm font-medium text-gray-700">Speed:</label>
+                  <select
+                    value={speechRate}
+                    onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
+                    className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  >
+                    <option value={0.5}>Slow</option>
+                    <option value={1}>Normal</option>
+                    <option value={1.5}>Fast</option>
+                  </select>
+                </div>
+              </div>
+              
+              {/* Text Content */}
+              <div 
+                className="prose prose-lg max-w-none text-gray-700 leading-relaxed text-lg"
+                dangerouslySetInnerHTML={{ __html: currentContent.data }}
+              />
+            </div>
           ) : currentContent.type === 'graph' ? (
             <div className="w-full h-64 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center rounded-xl border-2 border-dashed border-gray-300">
               <div className="text-center">
