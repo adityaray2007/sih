@@ -5,7 +5,7 @@ const ModuleSchema = new Schema({
   description: { type: String },
   content: [
     {
-      type: { type: String }, // text, image, graph
+          type: { type: String }, // text, image, graph
       data: { type: String },
     },
   ],

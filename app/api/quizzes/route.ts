@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken'
 export async function GET() {
   try {
     await connectToDatabase()
-    const quizzes = await Quiz.find({}).sort({ createdAt: -1 })
+    const quizzes = await Quiz.find({}).sort({ _id: -1 }).limit(50)
     return NextResponse.json({ quizzes })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })

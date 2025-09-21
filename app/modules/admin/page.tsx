@@ -8,40 +8,29 @@ import TopBar from '@/app/dashboard/components/Topbar'
 export default function CreateModulePage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [content, setContent] = useState<{ type: string; data: string }[]>([])
-  const [newContentType, setNewContentType] = useState('text')
-  const [newContentData, setNewContentData] = useState('')
-  const [newContentFile, setNewContentFile] = useState<File | null>(null)
+  const [content, setContent] = useState<Array<{ type: string; data: string }>>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
   const activeTab = "modules"
 
-  const addContentItem = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault()
-    if (newContentType === 'image') {
-      if (!newContentFile) return
-      const reader = new FileReader()
-      reader.onload = () => {
-        const base64String = reader.result as string
-        setContent([...content, { type: 'image', data: base64String }])
-        setNewContentFile(null)
-      }
-      reader.readAsDataURL(newContentFile)
-    } else {
-      if (!newContentData.trim()) return
-      setContent([...content, { type: newContentType, data: newContentData.trim() }])
-      setNewContentData('')
-    }
+  const addContentItem = (type: string) => {
+    setContent([...content, { type, data: '' }])
   }
 
   const removeContentItem = (index: number) => {
     setContent(content.filter((_, i) => i !== index))
   }
 
+  const updateContentItem = (index: number, data: string) => {
+    const newContent = [...content]
+    newContent[index].data = data
+    setContent(newContent)
+  }
+
   const handleSubmit = async () => {
     if (!title) return alert('Title is required')
     if (!description) return alert('Description is required')
-    if (content.length === 0) return alert('Please add at least one content item')
+    if (content.length === 0) return alert('Please add content to your module')
 
     setIsSubmitting(true)
 
@@ -49,7 +38,11 @@ export default function CreateModulePage() {
       const res = await fetch('/api/modules/admin/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, description, content }),
+        body: JSON.stringify({ 
+          title, 
+          description, 
+          content
+        }),
       })
 
       if (res.ok) {
@@ -173,91 +166,81 @@ export default function CreateModulePage() {
                   </div>
                 </div>
 
-                {/* Content Builder */}
+                {/* Rich Text Editor */}
                 <div className="bg-white rounded-2xl shadow-lg border border-red-100">
                   <div className="p-6 border-b border-gray-100">
                     <h2 className="text-2xl font-bold text-gray-800">Content Builder</h2>
-                    <p className="text-gray-600 mt-1">Add various types of content to your module</p>
+                    <p className="text-gray-600 mt-1">Add different types of content to your module</p>
                   </div>
 
-                  <div className="p-6 space-y-6">
-                    {/* Content Type Selector */}
-                    <div className="grid grid-cols-3 gap-3">
-                      {[
-                        { value: 'text', label: 'Text Content', icon: '📝', desc: 'Add paragraphs, explanations' },
-                        { value: 'image', label: 'Image', icon: '🖼️', desc: 'Upload visual content' },
-                        { value: 'graph', label: 'Graph Data', icon: '📊', desc: 'Add charts and graphs' }
-                      ].map((type) => (
-                        <button
-                          key={type.value}
-                          onClick={() => {
-                            setNewContentType(type.value)
-                            setNewContentData('')
-                            setNewContentFile(null)
-                          }}
-                          className={`p-4 rounded-xl border-2 transition-all text-left ${
-                            newContentType === type.value
-                              ? 'border-red-500 bg-red-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="text-2xl mb-2">{type.icon}</div>
-                          <h4 className="font-semibold text-gray-800">{type.label}</h4>
-                          <p className="text-xs text-gray-500 mt-1">{type.desc}</p>
-                        </button>
-                      ))}
+                  <div className="p-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <button
+                        onClick={() => addContentItem('text')}
+                        className="p-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-red-400 hover:bg-red-50 transition-all text-center"
+                      >
+                        <div className="text-2xl mb-2">📝</div>
+                        <div className="text-sm font-medium text-gray-700">Text</div>
+                      </button>
+                      <button
+                        onClick={() => addContentItem('image')}
+                        className="p-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-red-400 hover:bg-red-50 transition-all text-center"
+                      >
+                        <div className="text-2xl mb-2">🖼️</div>
+                        <div className="text-sm font-medium text-gray-700">Image</div>
+                      </button>
+                      <button
+                        onClick={() => addContentItem('graph')}
+                        className="p-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-red-400 hover:bg-red-50 transition-all text-center"
+                      >
+                        <div className="text-2xl mb-2">📊</div>
+                        <div className="text-sm font-medium text-gray-700">Graph</div>
+                      </button>
                     </div>
 
-                    {/* Content Input */}
                     <div className="space-y-4">
-                      {newContentType === 'image' ? (
-                        <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700">
-                            Upload Image
-                          </label>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                              if (e.target.files && e.target.files[0]) {
-                                setNewContentFile(e.target.files[0])
-                              } else {
-                                setNewContentFile(null)
-                              }
-                            }}
-                            className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-red-500 transition-all"
-                          />
+                      {content.map((item, index) => (
+                        <div key={index} className="border border-gray-200 rounded-xl p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-lg">{getContentTypeIcon(item.type)}</span>
+                              <span className="font-medium text-gray-700 capitalize">{item.type}</span>
+                            </div>
+                            <button
+                              onClick={() => removeContentItem(index)}
+                              className="text-red-500 hover:text-red-700 text-sm"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          
+                          {item.type === 'text' ? (
+                            <textarea
+                              value={item.data}
+                              onChange={(e) => updateContentItem(index, e.target.value)}
+                              placeholder="Enter text content..."
+                              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                              rows={4}
+                            />
+                          ) : item.type === 'image' ? (
+                            <input
+                              type="url"
+                              value={item.data}
+                              onChange={(e) => updateContentItem(index, e.target.value)}
+                              placeholder="Enter image URL..."
+                              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            />
+                          ) : item.type === 'graph' ? (
+                            <input
+                              type="text"
+                              value={item.data}
+                              onChange={(e) => updateContentItem(index, e.target.value)}
+                              placeholder="Enter graph description..."
+                              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            />
+                          ) : null}
                         </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-gray-700">
-                            {newContentType === 'text' ? 'Text Content' : 'Graph Data (JSON)'}
-                          </label>
-                          <textarea
-                            placeholder={
-                              newContentType === 'text' 
-                                ? "Enter your text content here..."
-                                : '{"type": "bar", "data": {...}}'
-                            }
-                            value={newContentData}
-                            onChange={(e) => setNewContentData(e.target.value)}
-                            rows={4}
-                            className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:ring-0 transition-all resize-none"
-                          />
-                        </div>
-                      )}
-
-                      <button
-                        onClick={addContentItem}
-                        disabled={
-                          newContentType === 'image' 
-                            ? !newContentFile 
-                            : !newContentData.trim()
-                        }
-                        className="w-full py-3 bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold rounded-xl hover:from-red-600 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                      >
-                        Add Content Item
-                      </button>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -283,9 +266,17 @@ export default function CreateModulePage() {
                         {description && (
                           <p className="text-gray-600 text-sm">{description}</p>
                         )}
-                        <div className="text-sm text-gray-500">
-                          {content.length} content item{content.length !== 1 ? 's' : ''}
-                        </div>
+                        {content.length > 0 && (
+                          <div className="space-y-2">
+                            {content.map((item, index) => (
+                              <div key={index} className="text-xs text-gray-500 flex items-center space-x-1">
+                                <span>{getContentTypeIcon(item.type)}</span>
+                                <span className="capitalize">{item.type}</span>
+                                {item.data && <span>- {item.data.substring(0, 30)}...</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="text-center py-8">
@@ -296,54 +287,12 @@ export default function CreateModulePage() {
                   </div>
                 </div>
 
-                {/* Content Items List */}
-                <div className="bg-white rounded-2xl shadow-lg border border-red-100">
-                  <div className="p-6 border-b border-gray-100">
-                    <h3 className="text-xl font-bold text-gray-800">Content Items</h3>
-                    <p className="text-gray-600 text-sm mt-1">{content.length} items added</p>
-                  </div>
-
-                  <div className="p-6">
-                    {content.length === 0 ? (
-                      <div className="text-center py-8">
-                        <div className="text-4xl mb-2">📄</div>
-                        <p className="text-gray-500 text-sm">No content items yet</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {content.map((item, index) => (
-                          <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-xl">
-                            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                              <span className="text-red-600 text-sm">{getContentTypeIcon(item.type)}</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium text-gray-800 capitalize text-sm">
-                                  {item.type}
-                                </span>
-                                <button
-                                  onClick={() => removeContentItem(index)}
-                                  className="text-red-500 hover:text-red-700 text-xs"
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                              <div className="text-xs text-gray-500 mt-1 truncate">
-                                {item.type === 'image' ? 'Image uploaded' : item.data.substring(0, 50) + '...'}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
 
                 {/* Action Button */}
                 <div className="bg-white rounded-2xl p-6 shadow-lg border border-red-100">
                   <button
                     onClick={handleSubmit}
-                    disabled={isSubmitting || !title || !description || content.length === 0}
+                    disabled={isSubmitting || !title || !description || !richContent.trim()}
                     className="w-full py-4 bg-gradient-to-r from-red-500 to-red-600 text-white font-bold rounded-xl hover:from-red-600 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
                   >
                     {isSubmitting ? (

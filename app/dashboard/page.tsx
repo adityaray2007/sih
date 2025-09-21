@@ -426,11 +426,15 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      <div className="flex-1 flex flex-col">
+    <div className="flex h-screen bg-white overflow-hidden">
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        user={user}
+      />
+      <div className="flex-1 flex flex-col bg-white overflow-hidden">
         <TopBar currentPage={activeTab} user={user} />
-        <main className="flex-1 overflow-auto">{renderContent()}</main>
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-white">{renderContent()}</main>
       </div>
     </div>
   )

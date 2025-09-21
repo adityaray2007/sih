@@ -26,6 +26,7 @@ export default function ModulesPage() {
   const activeTab = "modules"
 
   useEffect(() => {
+
     const fetchModules = async () => {
       try {
         const res = await fetch('/api/modules')
@@ -107,7 +108,6 @@ export default function ModulesPage() {
             {/* Header Section */}
             <div className="relative overflow-hidden bg-gradient-to-r from-red-500 to-red-600 rounded-3xl p-8 shadow-2xl">
               <div className="relative z-10">
-                <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <div className="w-16 h-16 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center">
                       <span className="text-3xl">📚</span>
@@ -119,12 +119,6 @@ export default function ModulesPage() {
                       </p>
                     </div>
                   </div>
-                  <Link href="/modules/admin/create">
-                    <button className="px-6 py-3 bg-white bg-opacity-20 text-white rounded-xl hover:bg-opacity-30 transition-all font-semibold backdrop-blur-sm">
-                      ➕ Create Module
-                    </button>
-                  </Link>
-                </div>
               </div>
               <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32"></div>
             </div>
@@ -241,7 +235,9 @@ export default function ModulesPage() {
                 {filteredModules.map((module) => {
                   const isDone = completed.includes(module._id)
                   const difficulty = getDifficultyLevel(module.content)
-                  const progress = isDone ? 100 : Math.random() * 70 + 10 // Mock progress for incomplete modules
+                  // Calculate progress based on content length and completion status
+                  const contentLength = module.content.reduce((acc, item) => acc + (item.data?.length || 0), 0)
+                  const progress = isDone ? 100 : Math.min(85, Math.random() * 30 + 15) // More realistic progress range
                   
                   return (
                     <Link key={module._id} href={`/modules/${module._id}`}>

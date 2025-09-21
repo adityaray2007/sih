@@ -56,13 +56,7 @@ export default function ModulePage() {
     fetchModule()
   }, [id])
 
-  useEffect(() => {
-    // Update reading progress based on current content index
-    if (moduleData && moduleData.content.length > 0) {
-      const progress = ((currentContentIndex + 1) / moduleData.content.length) * 100
-      setReadingProgress(progress)
-    }
-  }, [currentContentIndex, moduleData])
+
 
   async function handleMarkComplete() {
     setMarkingComplete(true)
@@ -249,35 +243,35 @@ export default function ModulePage() {
                 </div>
               </div>
 
-              <div className="p-8">
-                {currentContent.type === 'image' ? (
-                  <div className="text-center">
-                    <img 
-                      src={currentContent.data} 
-                      alt={`Module content ${currentContentIndex + 1}`} 
-                      className="max-w-full h-auto rounded-xl shadow-lg mx-auto"
-                      style={{ maxHeight: '500px' }}
-                    />
-                  </div>
-                ) : currentContent.type === 'text' ? (
-                  <div className="prose prose-lg max-w-none">
-                    <p className="text-gray-700 leading-relaxed text-lg">{currentContent.data}</p>
-                  </div>
-                ) : currentContent.type === 'graph' ? (
-                  <div className="w-full h-64 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center rounded-xl border-2 border-dashed border-gray-300">
-                    <div className="text-center">
-                      <div className="text-4xl mb-2">📊</div>
-                      <p className="text-gray-600 font-medium">Graph Visualization</p>
-                      <p className="text-gray-500 text-sm mt-1">Interactive chart will be displayed here</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <div className="text-4xl mb-2">❓</div>
-                    <p className="text-gray-500">Unknown content type</p>
-                  </div>
-                )}
+        <div className="p-8">
+          {currentContent.type === 'image' ? (
+            <div className="text-center">
+              <img
+                src={currentContent.data}
+                alt={`Module content ${currentContentIndex + 1}`}
+                className="max-w-full h-auto rounded-xl shadow-lg mx-auto"
+                style={{ maxHeight: '500px' }}
+              />
+            </div>
+          ) : currentContent.type === 'text' ? (
+            <div className="prose prose-lg max-w-none">
+              <p className="text-gray-700 leading-relaxed text-lg">{currentContent.data}</p>
+            </div>
+          ) : currentContent.type === 'graph' ? (
+            <div className="w-full h-64 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center rounded-xl border-2 border-dashed border-gray-300">
+              <div className="text-center">
+                <div className="text-4xl mb-2">📊</div>
+                <p className="text-gray-600 font-medium">Graph Visualization</p>
+                <p className="text-gray-500 text-sm mt-1">Interactive chart will be displayed here</p>
               </div>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="text-4xl mb-2">❓</div>
+              <p className="text-gray-500">Unknown content type</p>
+            </div>
+          )}
+        </div>
 
               {/* Navigation Controls */}
               <div className="p-6 border-t border-gray-100 bg-gray-50">

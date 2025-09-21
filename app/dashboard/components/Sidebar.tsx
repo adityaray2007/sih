@@ -2,12 +2,25 @@
 
 import Link from 'next/link'
 
+interface User {
+  id: string
+  name: string
+  email: string
+  role: string
+  xp: number
+  completedModules: string[]
+  timeSpentPerModule: { moduleId: string; timeSpent: number }[]
+}
+
 interface SidebarProps {
   activeTab?: string
   setActiveTab?: (tab: string) => void
+  user?: User | null
+  completedModules?: number
+  totalModules?: number
 }
 
-export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
+export default function Sidebar({ activeTab, setActiveTab, user }: SidebarProps) {
   const links = [
     { name: 'Dashboard', href: '/dashboard', icon: '📊' },
     { name: 'Modules', href: '/modules', icon: '📚' },
@@ -60,40 +73,19 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
           })}
         </nav>
 
-        {/* Quick Stats */}
-        <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-2xl p-4 border border-red-200">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-semibold text-red-700">Today's Progress</span>
-            <span className="text-red-600">📈</span>
-          </div>
-          <div className="text-2xl font-bold text-red-800 mb-1">75%</div>
-          <div className="w-full bg-red-200 rounded-full h-2">
-            <div className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full" style={{width: '75%'}}></div>
-          </div>
-          <p className="text-xs text-red-600 mt-2">3 of 4 modules completed</p>
-        </div>
       </div>
 
-      {/* Teacher Alert Button */}
+      {/* Teacher Alert Button - Only for teachers and admins */}
       <div className="p-6 border-t border-red-100">
-        <Link href="/alerts/admin/create">
-          <button className="w-full p-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] font-semibold flex items-center justify-center space-x-2">
-            <span className="text-lg">📤</span>
-            <span>Send Alert</span>
-          </button>
-        </Link>
+        {(user?.role === 'teacher' || user?.role === 'admin') && (
+          <Link href="/alerts/admin/create">
+            <button className="w-full p-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] font-semibold flex items-center justify-center space-x-2">
+              <span className="text-lg">📤</span>
+              <span>Send Alert</span>
+            </button>
+          </Link>
+        )}
         
-        {/* User Info */}
-        <div className="mt-4 flex items-center space-x-3 p-3 bg-gray-50 rounded-xl">
-          <div className="w-10 h-10 bg-gradient-to-r from-red-400 to-red-500 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-sm">A</span>
-          </div>
-          <div className="flex-1">
-            <p className="font-semibold text-gray-800 text-sm">Admin User</p>
-            <p className="text-xs text-gray-500">Online</p>
-          </div>
-          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-        </div>
       </div>
     </div>
   )
