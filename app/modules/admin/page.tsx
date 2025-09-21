@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from '@/app/dashboard/components/Sidebar'
 import TopBar from '@/app/dashboard/components/Topbar'
+import RichTextEditor from './components/RichTextEditor'
 
 export default function CreateModulePage() {
   const [title, setTitle] = useState('')
@@ -215,12 +216,11 @@ export default function CreateModulePage() {
                           </div>
                           
                           {item.type === 'text' ? (
-                            <textarea
+                            <RichTextEditor
                               value={item.data}
-                              onChange={(e) => updateContentItem(index, e.target.value)}
+                              onChange={(value) => updateContentItem(index, value)}
                               placeholder="Enter text content..."
-                              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                              rows={4}
+                              className="w-full"
                             />
                           ) : item.type === 'image' ? (
                             <input
@@ -267,12 +267,41 @@ export default function CreateModulePage() {
                           <p className="text-gray-600 text-sm">{description}</p>
                         )}
                         {content.length > 0 && (
-                          <div className="space-y-2">
+                          <div className="space-y-3">
                             {content.map((item, index) => (
-                              <div key={index} className="text-xs text-gray-500 flex items-center space-x-1">
-                                <span>{getContentTypeIcon(item.type)}</span>
-                                <span className="capitalize">{item.type}</span>
-                                {item.data && <span>- {item.data.substring(0, 30)}...</span>}
+                              <div key={index} className="border border-gray-200 rounded-lg p-3">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <span className="text-sm">{getContentTypeIcon(item.type)}</span>
+                                  <span className="text-xs font-medium text-gray-600 capitalize">{item.type}</span>
+                                </div>
+                                {item.type === 'text' ? (
+                                  <div 
+                                    className="text-sm text-gray-700 prose prose-sm max-w-none"
+                                    dangerouslySetInnerHTML={{ __html: item.data || 'No content' }}
+                                  />
+                                ) : item.type === 'image' ? (
+                                  <div className="text-xs text-gray-500">
+                                    {item.data ? (
+                                      <div className="space-y-1">
+                                        <img 
+                                          src={item.data} 
+                                          alt="Preview" 
+                                          className="w-full h-20 object-cover rounded border"
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = 'none'
+                                          }}
+                                        />
+                                        <p className="text-gray-400">Image URL: {item.data}</p>
+                                      </div>
+                                    ) : (
+                                      'No image URL provided'
+                                    )}
+                                  </div>
+                                ) : item.type === 'graph' ? (
+                                  <div className="text-xs text-gray-500">
+                                    {item.data || 'No graph description provided'}
+                                  </div>
+                                ) : null}
                               </div>
                             ))}
                           </div>
@@ -292,7 +321,7 @@ export default function CreateModulePage() {
                 <div className="bg-white rounded-2xl p-6 shadow-lg border border-red-100">
                   <button
                     onClick={handleSubmit}
-                    disabled={isSubmitting || !title || !description || !richContent.trim()}
+                    disabled={isSubmitting || !title || !description || content.length === 0}
                     className="w-full py-4 bg-gradient-to-r from-red-500 to-red-600 text-white font-bold rounded-xl hover:from-red-600 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
                   >
                     {isSubmitting ? (

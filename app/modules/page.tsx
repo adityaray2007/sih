@@ -23,9 +23,16 @@ export default function ModulesPage() {
   const [completed, setCompleted] = useState<string[]>([])
   const [filter, setFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const [user, setUser] = useState<{ role: string } | null>(null)
   const activeTab = "modules"
 
   useEffect(() => {
+    // Get user data from localStorage
+    const userFromStorage = localStorage.getItem('user')
+    if (userFromStorage) {
+      const userData = JSON.parse(userFromStorage)
+      setUser(userData)
+    }
 
     const fetchModules = async () => {
       try {
@@ -71,6 +78,10 @@ export default function ModulesPage() {
     return { level: 'Beginner', color: 'green' }
   }
 
+  const isTeacherOrAdmin = () => {
+    return user && (user.role === 'teacher' || user.role === 'admin')
+  }
+
   const filteredModules = modules.filter(module => {
     const matchesSearch = module.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          module.description.toLowerCase().includes(searchTerm.toLowerCase())
@@ -108,16 +119,29 @@ export default function ModulesPage() {
             {/* Header Section */}
             <div className="relative overflow-hidden bg-gradient-to-r from-red-500 to-red-600 rounded-3xl p-8 shadow-2xl">
               <div className="relative z-10">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-16 h-16 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center">
-                      <span className="text-3xl">📚</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-16 h-16 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center">
+                        <span className="text-3xl">📚</span>
+                      </div>
+                      <div>
+                        <h1 className="text-4xl font-bold text-white">Learning Modules</h1>
+                        <p className="text-red-100 text-lg font-medium mt-1">
+                          Master essential emergency preparedness skills
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h1 className="text-4xl font-bold text-white">Learning Modules</h1>
-                      <p className="text-red-100 text-lg font-medium mt-1">
-                        Master essential emergency preparedness skills
-                      </p>
-                    </div>
+                    
+                    {/* Create Module Button - Only for Teachers/Admins */}
+                    {isTeacherOrAdmin() && (
+                      <Link href="/modules/admin">
+                        <button className="px-4 py-2 md:px-6 md:py-3 bg-white bg-opacity-20 text-white rounded-xl hover:bg-opacity-30 transition-all backdrop-blur-sm font-semibold flex items-center justify-center space-x-2 text-sm md:text-base">
+                          <span className="text-lg">➕</span>
+                          <span className="hidden sm:inline">Create <span className="text-red-400 font-bold">Module</span></span>
+                          <span className="sm:hidden">Create</span>
+                        </button>
+                      </Link>
+                    )}
                   </div>
               </div>
               <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32"></div>

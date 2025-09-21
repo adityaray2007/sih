@@ -254,9 +254,10 @@ export default function ModulePage() {
               />
             </div>
           ) : currentContent.type === 'text' ? (
-            <div className="prose prose-lg max-w-none">
-              <p className="text-gray-700 leading-relaxed text-lg">{currentContent.data}</p>
-            </div>
+            <div 
+              className="prose prose-lg max-w-none text-gray-700 leading-relaxed text-lg"
+              dangerouslySetInnerHTML={{ __html: currentContent.data }}
+            />
           ) : currentContent.type === 'graph' ? (
             <div className="w-full h-64 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center rounded-xl border-2 border-dashed border-gray-300">
               <div className="text-center">
