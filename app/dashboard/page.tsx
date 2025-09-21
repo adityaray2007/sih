@@ -8,31 +8,43 @@ import ModulesGraph from './components/ModulesGraph'
 import UpcomingDrills from './components/UpcomingDrills'
 import ProfileCard from './components/ProfileCard'
 import dynamic from 'next/dynamic'
+import { Line } from 'react-chartjs-2'
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js'
 
-// Dynamically load weather map to avoid SSR issues
 const WeatherMap = dynamic(() => import('../weather/page'), { ssr: false })
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('Dashboard')
-  const [userId, setUserId] = useState('')
+  const [userName, setUserName] = useState('')
   const [completedModules, setCompletedModules] = useState(0)
   const [totalModules, setTotalModules] = useState(0)
   const [drills, setDrills] = useState<{ title: string; due: string }[]>([])
+  const [xp, setXp] = useState(0)
+  const [timeSpentData, setTimeSpentData] = useState<number[]>([])
+  const [topStudents, setTopStudents] = useState<{ name: string; xp: number }[]>([])
 
   useEffect(() => {
-    // Fetch user data (replace with your authentication/session logic)
     const user = JSON.parse(localStorage.getItem('user') || '{}')
-    setUserId(user.id || 'user1')
+    setUserName(user.name || 'Student')
 
-    // Fetch dashboard data from backend APIs
     const fetchDashboardData = async () => {
       try {
-        const modulesRes = await fetch(`/api/dashboard/modules?userId=${user.id || 'user1'}`)
+        const modulesRes = await fetch(`/api/dashboard/modules?userId=${user.id}`)
         const modulesData = await modulesRes.json()
-        setTotalModules(modulesData.total || 5)
-        setCompletedModules(modulesData.completed || 3)
+        setTotalModules(modulesData.total)
+        setCompletedModules(modulesData.completed)
 
-        const drillsRes = await fetch(`/api/dashboard/drills?userId=${user.id || 'user1'}`)
+        const drillsRes = await fetch(`/api/dashboard/drills?userId=${user.id}`)
         const drillsData = await drillsRes.json()
         setDrills(
           drillsData.length
@@ -42,6 +54,15 @@ export default function DashboardPage() {
                 { title: 'Fire Drill', due: '2025-09-28' },
               ]
         )
+
+        const xpRes = await fetch(`/api/dashboard/xp?userId=${user.id}`)
+        const xpData = await xpRes.json()
+        setXp(xpData.totalXp || 0)
+        setTimeSpentData(xpData.timeSpentPerModule || [])
+
+        const topRes = await fetch(`/api/dashboard/top-students`)
+        const topData = await topRes.json()
+        setTopStudents(topData || [])
       } catch (err) {
         console.error('Error fetching dashboard data:', err)
       }
@@ -53,17 +74,245 @@ export default function DashboardPage() {
   const renderContent = () => {
     switch (activeTab) {
       case 'Dashboard':
+        const timeChartData = {
+          labels: Array.from({ length: timeSpentData.length }, (_, i) => `Module ${i + 1}`),
+          datasets: [
+            {
+              label: 'Time Spent (minutes)',
+              data: timeSpentData,
+              fill: false,
+              borderColor: 'rgb(239, 68, 68)',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              tension: 0.4,
+              pointBackgroundColor: 'rgb(220, 38, 38)',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2,
+              pointRadius: 6
+            }
+          ]
+        }
+
+        const chartOptions = {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                font: {
+                  family: 'Inter, system-ui, sans-serif',
+                  size: 14
+                },
+                color: '#374151'
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)'
+              },
+              ticks: {
+                font: {
+                  family: 'Inter, system-ui, sans-serif'
+                },
+                color: '#6B7280'
+              }
+            },
+            y: {
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)'
+              },
+              ticks: {
+                font: {
+                  family: 'Inter, system-ui, sans-serif'
+                },
+                color: '#6B7280'
+              }
+            }
+          }
+        } as const
+
         return (
-          <div className="space-y-6 p-6">
-            <CompletionBar completed={completedModules} total={totalModules} />
-            <ModulesGraph completed={completedModules} total={totalModules} />
-            <UpcomingDrills drills={drills} />
+          <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50">
+            <div className="p-8 space-y-8">
+              {/* Welcome Header */}
+              <div className="relative overflow-hidden bg-gradient-to-r from-red-500 to-red-600 rounded-3xl p-8 shadow-2xl">
+                <div className="relative z-10">
+                  <h2 className="text-4xl font-bold text-white mb-2 font-['Inter']">
+                    Welcome back, {userName}! 👋
+                  </h2>
+                  <p className="text-red-100 text-lg font-medium">
+                    Ready to continue your learning journey?
+                  </p>
+                </div>
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32"></div>
+                <div className="absolute bottom-0 left-0 w-32 h-32 bg-white opacity-10 rounded-full -ml-16 -mb-16"></div>
+              </div>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                {/* Completion Card */}
+                <div className="bg-white rounded-2xl p-6 shadow-lg border border-red-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-gray-600 font-semibold text-sm uppercase tracking-wide">Progress</h3>
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                      <span className="text-red-600 text-lg">📚</span>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <CompletionBar completed={completedModules} total={totalModules} />
+                    <p className="text-2xl font-bold text-gray-800">
+                      {completedModules}/{totalModules}
+                    </p>
+                    <p className="text-sm text-gray-500">Modules Completed</p>
+                  </div>
+                </div>
+
+                {/* XP Card */}
+                <div className="bg-white rounded-2xl p-6 shadow-lg border border-red-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-gray-600 font-semibold text-sm uppercase tracking-wide">Experience</h3>
+                    <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center">
+                      <span className="text-white text-lg">⭐</span>
+                    </div>
+                  </div>
+                  <p className="text-3xl font-bold text-gray-800 mb-2">{xp.toLocaleString()}</p>
+                  <p className="text-sm text-gray-500">Total XP Earned</p>
+                  <div className="mt-3 bg-red-50 rounded-full h-2">
+                    <div className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full" style={{width: `${Math.min((xp / 10000) * 100, 100)}%`}}></div>
+                  </div>
+                </div>
+
+                {/* Next Drill Card */}
+                <div className="bg-white rounded-2xl p-6 shadow-lg border border-red-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-gray-600 font-semibold text-sm uppercase tracking-wide">Next Drill</h3>
+                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                      <span className="text-orange-600 text-lg">🚨</span>
+                    </div>
+                  </div>
+                  {drills.length > 0 ? (
+                    <>
+                      <p className="text-xl font-bold text-gray-800 mb-1">{drills[0].title}</p>
+                      <p className="text-sm text-gray-500">Due: {new Date(drills[0].due).toLocaleDateString()}</p>
+                    </>
+                  ) : (
+                    <p className="text-gray-500">No upcoming drills</p>
+                  )}
+                </div>
+
+                {/* Rank Card */}
+                <div className="bg-white rounded-2xl p-6 shadow-lg border border-red-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-gray-600 font-semibold text-sm uppercase tracking-wide">Your Rank</h3>
+                    <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <span className="text-yellow-600 text-lg">🏆</span>
+                    </div>
+                  </div>
+                  <p className="text-3xl font-bold text-gray-800 mb-2">#3</p>
+                  <p className="text-sm text-gray-500">Class Ranking</p>
+                </div>
+              </div>
+
+              {/* Main Content Grid */}
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                {/* Time Chart */}
+                <div className="xl:col-span-2">
+                  <div className="bg-white rounded-2xl p-6 shadow-lg border border-red-100">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-xl font-bold text-gray-800">Time Spent on Modules</h3>
+                      <div className="flex space-x-2">
+                        <button className="px-3 py-1 text-sm bg-red-100 text-red-600 rounded-lg font-medium">7D</button>
+                        <button className="px-3 py-1 text-sm text-gray-500 rounded-lg font-medium">30D</button>
+                        <button className="px-3 py-1 text-sm text-gray-500 rounded-lg font-medium">90D</button>
+                      </div>
+                    </div>
+                    <div className="h-80">
+                      {timeSpentData.length ? (
+                        <Line data={timeChartData} options={chartOptions} />
+                      ) : (
+                        <div className="h-full flex items-center justify-center bg-gray-50 rounded-xl">
+                          <div className="text-center">
+                            <div className="text-4xl mb-2">📊</div>
+                            <p className="text-gray-500 font-medium">No time data available yet</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Top Students */}
+                <div>
+                  <div className="bg-white rounded-2xl p-6 shadow-lg border border-red-100">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-xl font-bold text-gray-800">Top Performers</h3>
+                      <span className="text-sm text-red-600 font-medium cursor-pointer hover:text-red-700">View all</span>
+                    </div>
+                    <div className="space-y-4">
+                      {topStudents.length > 0 ? (
+                        topStudents.map((student, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-red-50 transition-colors">
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                                idx === 0 ? 'bg-yellow-500 text-white' : 
+                                idx === 1 ? 'bg-gray-400 text-white' : 
+                                idx === 2 ? 'bg-orange-500 text-white' : 
+                                'bg-red-100 text-red-600'
+                              }`}>
+                                {idx + 1}
+                              </div>
+                              <span className="font-medium text-gray-800">{student.name}</span>
+                            </div>
+                            <span className="font-bold text-red-600">{student.xp.toLocaleString()} XP</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8">
+                          <div className="text-3xl mb-2">🎯</div>
+                          <p className="text-gray-500">No leaderboard data yet</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Upcoming Drills Section */}
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-red-100">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-gray-800">Upcoming Drills & Events</h3>
+                  <span className="text-sm text-red-600 font-medium cursor-pointer hover:text-red-700">View calendar</span>
+                </div>
+                <UpcomingDrills drills={drills} />
+              </div>
+
+              {/* Modules Graph */}
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-red-100">
+                <h3 className="text-xl font-bold text-gray-800 mb-6">Module Progress Overview</h3>
+                <ModulesGraph completed={completedModules} total={totalModules} />
+              </div>
+            </div>
           </div>
         )
       case 'Modules':
-        return <div className="p-6">List of Modules Here</div>
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 p-8">
+            <div className="bg-white rounded-2xl p-8 shadow-lg border border-red-100">
+              <h2 className="text-3xl font-bold text-gray-800 mb-4">Learning Modules</h2>
+              <p className="text-gray-600">Explore your available learning modules here.</p>
+            </div>
+          </div>
+        )
       case 'Quizzes':
-        return <div className="p-6">List of Quizzes Here</div>
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 p-8">
+            <div className="bg-white rounded-2xl p-8 shadow-lg border border-red-100">
+              <h2 className="text-3xl font-bold text-gray-800 mb-4">Quiz Center</h2>
+              <p className="text-gray-600">Test your knowledge with interactive quizzes.</p>
+            </div>
+          </div>
+        )
       case 'Weather Map':
         return (
           <div className="w-full h-[80vh]">
@@ -72,6 +321,15 @@ export default function DashboardPage() {
         )
       case 'Profile':
         return <ProfileCard />
+      case 'Alerts':
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 p-8">
+            <div className="bg-white rounded-2xl p-8 shadow-lg border border-red-100">
+              <h2 className="text-3xl font-bold text-gray-800 mb-4">Notifications & Alerts</h2>
+              <p className="text-gray-600">Stay updated with important announcements and alerts.</p>
+            </div>
+          </div>
+        )
       default:
         return null
     }
@@ -81,7 +339,7 @@ export default function DashboardPage() {
     <div className="flex h-screen bg-gray-100">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <div className="flex-1 flex flex-col">
-        <TopBar />
+        <TopBar currentPage={activeTab} />
         <main className="flex-1 overflow-auto">{renderContent()}</main>
       </div>
     </div>

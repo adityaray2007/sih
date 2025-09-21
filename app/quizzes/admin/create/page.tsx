@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Sidebar from '@/app/dashboard/components/Sidebar'
+import TopBar from '@/app/dashboard/components/Topbar'
 
 export default function CreateQuizPage() {
   const [title, setTitle] = useState('')
@@ -10,7 +12,7 @@ export default function CreateQuizPage() {
   const [correctAnswer, setCorrectAnswer] = useState<number>(0)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const router = useRouter()
-
+  const activeTab = "create quiz"
   const handleOptionChange = (index: number, value: string) => {
     const newOptions = [...options]
     newOptions[index] = value
@@ -59,45 +61,79 @@ export default function CreateQuizPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white p-6 text-black max-w-3xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">Create Quiz</h2>
+    <div className="flex min-h-screen bg-white text-black">
+      {/* Sidebar */}
+      <Sidebar activeTab="Quizzes" />
 
-      <div className="mb-4">
-        <label className="block mb-1">Title</label>
-        <input type="text" value={title} onChange={e => setTitle(e.target.value)}
-          className="w-full p-2 border rounded" />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* TopBar */}
+       <TopBar currentPage={activeTab} />
+
+        {/* Main content */}
+        <main className="flex-1 overflow-auto p-6 max-w-3xl mx-auto w-full">
+          <h2 className="text-2xl font-bold mb-4">Create Quiz</h2>
+
+          <div className="mb-4">
+            <label className="block mb-1">Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block mb-1">Question</label>
+            <textarea
+              value={question}
+              onChange={e => setQuestion(e.target.value)}
+              className="w-full p-2 border rounded"
+            ></textarea>
+          </div>
+
+          <div className="mb-4 space-y-2">
+            <label className="block mb-1">Options</label>
+            {options.map((o, i) => (
+              <input
+                key={i}
+                type="text"
+                value={o}
+                onChange={e => handleOptionChange(i, e.target.value)}
+                placeholder={`Option ${i + 1}`}
+                className="w-full p-2 border rounded"
+              />
+            ))}
+          </div>
+
+          <div className="mb-4">
+            <label className="block mb-1">Correct Answer</label>
+            <select
+              value={correctAnswer}
+              onChange={e => setCorrectAnswer(Number(e.target.value))}
+              className="p-2 border rounded"
+            >
+              {options.map((_, i) => (
+                <option key={i} value={i}>
+                  Option {i + 1}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-4">
+            <label className="block mb-1">Image (optional)</label>
+            <input type="file" accept="image/*" onChange={handleImageChange} />
+          </div>
+
+          <button
+            onClick={handleSubmit}
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+          >
+            Create Quiz
+          </button>
+        </main>
       </div>
-
-      <div className="mb-4">
-        <label className="block mb-1">Question</label>
-        <textarea value={question} onChange={e => setQuestion(e.target.value)}
-          className="w-full p-2 border rounded"></textarea>
-      </div>
-
-      <div className="mb-4 space-y-2">
-        <label className="block mb-1">Options</label>
-        {options.map((o, i) => (
-          <input key={i} type="text" value={o} onChange={e => handleOptionChange(i, e.target.value)}
-            placeholder={`Option ${i + 1}`} className="w-full p-2 border rounded" />
-        ))}
-      </div>
-
-      <div className="mb-4">
-        <label className="block mb-1">Correct Answer</label>
-        <select value={correctAnswer} onChange={e => setCorrectAnswer(Number(e.target.value))}
-          className="p-2 border rounded">
-          {options.map((_, i) => <option key={i} value={i}>Option {i + 1}</option>)}
-        </select>
-      </div>
-
-      <div className="mb-4">
-        <label className="block mb-1">Image (optional)</label>
-        <input type="file" accept="image/*" onChange={handleImageChange} />
-      </div>
-
-      <button onClick={handleSubmit} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-        Create Quiz
-      </button>
     </div>
   )
 }

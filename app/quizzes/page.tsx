@@ -17,7 +17,7 @@ export default function QuizzesPage() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedOptions, setSelectedOptions] = useState<{ [quizId: string]: number }>({})
-
+  const activeTab = "Quizzes"
   useEffect(() => {
     const fetchQuizzes = async () => {
       try {
@@ -50,14 +50,14 @@ export default function QuizzesPage() {
   return (
     <div className="flex min-h-screen bg-white text-black">
       {/* Sidebar */}
-      <Sidebar />
+      <Sidebar activeTab="Quizzes" />
 
       <div className="flex-1 flex flex-col">
         {/* TopBar */}
-        <TopBar />
+        <TopBar currentPage={activeTab} />
 
         {/* Main content */}
-        <div className="p-6 max-w-4xl mx-auto space-y-6 flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto p-6 max-w-4xl mx-auto space-y-6">
           <h2 className="text-2xl font-bold mb-4">Available Quizzes</h2>
 
           {loading && <p>Loading quizzes...</p>}
@@ -92,7 +92,7 @@ export default function QuizzesPage() {
               </button>
             </div>
           ))}
-        </div>
+        </main>
       </div>
     </div>
   )
