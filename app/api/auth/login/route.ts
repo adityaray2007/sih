@@ -34,7 +34,15 @@ export async function POST(req: Request) {
     // Return JSON
     return NextResponse.json({
       token,
-      user: { name: user.name, email: user.email, role: user.role }
+      user: { 
+        id: user._id,
+        name: user.name, 
+        email: user.email, 
+        role: user.role,
+        xp: user.xp,
+        completedModules: user.completedModules,
+        timeSpentPerModule: user.completedModules.map(m => ({ moduleId: m.moduleId, timeSpent: m.timeSpent }))
+      }
     })
 
   } catch (err: any) {

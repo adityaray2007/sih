@@ -1,29 +1,51 @@
 'use client'
 
-interface Drill {
+interface Alert {
   title: string
   due: string
 }
 
 interface Props {
-  drills: Drill[]
+  drills: Alert[]
 }
 
 export default function UpcomingDrills({ drills }: Props) {
+  if (!drills || drills.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-4xl mb-2">📅</div>
+        <p className="text-gray-500 font-medium">No upcoming alerts</p>
+        <p className="text-gray-400 text-sm">Check back later for new alerts and events</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="bg-white p-4 rounded shadow">
-      <h3 className="text-black font-semibold mb-4">Upcoming Drills</h3>
-      <ul className="space-y-2">
-        {drills.map((drill, idx) => (
-          <li
-            key={idx}
-            className="p-3 border border-gray-200 rounded flex justify-between items-center hover:bg-gray-50"
-          >
-            <span>{drill.title}</span>
-            <span className="text-gray-500 text-sm">{drill.due}</span>
-          </li>
-        ))}
-      </ul>
+    <div className="space-y-3">
+      {drills.map((alert, idx) => (
+        <div
+          key={idx}
+          className="flex items-center justify-between p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-xl border border-red-100 hover:shadow-md transition-all duration-200"
+        >
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+              <span className="text-red-600 text-lg">🚨</span>
+            </div>
+            <div>
+              <p className="font-semibold text-gray-800">{alert.title}</p>
+              <p className="text-sm text-gray-500">Scheduled Alert</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-medium text-red-600">
+              {new Date(alert.due).toLocaleDateString()}
+            </p>
+            <p className="text-xs text-gray-500">
+              {new Date(alert.due).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

@@ -22,8 +22,9 @@ export default function LoginPage() {
       })
       const data = await res.json()
       if (res.ok) {
-        // Save JWT in localStorage for manual login
+        // Save user data and token in localStorage for manual login
         localStorage.setItem('token', data.token)
+        localStorage.setItem('user', JSON.stringify(data.user))
         router.push('/dashboard')
       } else {
         setError(data.error || 'Login failed')

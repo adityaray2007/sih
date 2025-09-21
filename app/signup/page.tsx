@@ -23,7 +23,10 @@ export default function SignupPage() {
     })
     const data = await res.json()
     if (res.ok) {
-      router.push('/login')
+      // Save user data and token in localStorage for automatic login
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      router.push('/dashboard')
     } else {
       setError(data.error || 'Signup failed')
     }

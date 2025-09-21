@@ -3,9 +3,46 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
-export default function TopBar({ currentPage }: { currentPage: string }) {
+interface User {
+  id: string
+  name: string
+  email: string
+  role: string
+  xp: number
+  completedModules: string[]
+  timeSpentPerModule: { moduleId: string; timeSpent: number }[]
+}
+
+interface TopBarProps {
+  currentPage: string
+  user?: User | null
+}
+
+export default function TopBar({ currentPage, user }: TopBarProps) {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+
+  const getUserRoleDisplay = (role: string) => {
+    switch (role) {
+      case 'student':
+        return 'Student'
+      case 'teacher':
+        return 'Teacher'
+      case 'admin':
+        return 'Admin'
+      default:
+        return 'User'
+    }
+  }
+
+  const getUserInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+  }
 
   const notifications = [
     { id: 1, title: 'New drill scheduled', time: '2 min ago', type: 'info' },
@@ -36,7 +73,7 @@ export default function TopBar({ currentPage }: { currentPage: string }) {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-800 capitalize">{currentPage}</h1>
-            <p className="text-sm text-gray-500">Welcome back! Here's what's happening today.</p>
+            <p className="text-sm text-gray-500">Welcome back! Here&apos;s what&apos;s happening today.</p>
           </div>
         </div>
 
@@ -114,11 +151,17 @@ export default function TopBar({ currentPage }: { currentPage: string }) {
               className="flex items-center space-x-3 p-2 hover:bg-red-50 rounded-xl transition-all"
             >
               <div className="w-10 h-10 bg-gradient-to-r from-red-400 to-red-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">A</span>
+                <span className="text-white font-bold text-sm">
+                  {user ? getUserInitials(user.name) : 'U'}
+                </span>
               </div>
               <div className="hidden md:block text-left">
-                <p className="font-semibold text-gray-800 text-sm">Admin User</p>
-                <p className="text-xs text-gray-500">Administrator</p>
+                <p className="font-semibold text-gray-800 text-sm">
+                  {user?.name || 'Loading...'}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {user ? getUserRoleDisplay(user.role) : 'Loading...'}
+                </p>
               </div>
               <span className="text-gray-400 text-sm">⌄</span>
             </button>
@@ -129,11 +172,17 @@ export default function TopBar({ currentPage }: { currentPage: string }) {
                 <div className="p-4 border-b border-gray-100">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-gradient-to-r from-red-400 to-red-500 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold">A</span>
+                      <span className="text-white font-bold">
+                        {user ? getUserInitials(user.name) : 'U'}
+                      </span>
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-800">Admin User</p>
-                      <p className="text-sm text-gray-500">admin@example.com</p>
+                      <p className="font-semibold text-gray-800">
+                        {user?.name || 'Loading...'}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {user?.email || 'Loading...'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -160,12 +209,22 @@ export default function TopBar({ currentPage }: { currentPage: string }) {
                 </div>
 
                 <div className="p-2 border-t border-gray-100">
-                  <Link href="/login">
-                    <button className="w-full text-left p-3 hover:bg-red-50 rounded-xl transition-all flex items-center space-x-3 text-red-600">
-                      <span>🚪</span>
-                      <span className="font-medium">Logout</span>
-                    </button>
-                  </Link>
+                  <button 
+                    onClick={async () => {
+                      try {
+                        await fetch('/api/auth/logout', { method: 'POST' })
+                      } catch (error) {
+                        console.error('Logout error:', error)
+                      } finally {
+                        localStorage.removeItem('user')
+                        window.location.href = '/login'
+                      }
+                    }}
+                    className="w-full text-left p-3 hover:bg-red-50 rounded-xl transition-all flex items-center space-x-3 text-red-600"
+                  >
+                    <span>🚪</span>
+                    <span className="font-medium">Logout</span>
+                  </button>
                 </div>
               </div>
             )}

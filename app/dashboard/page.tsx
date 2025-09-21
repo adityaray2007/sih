@@ -23,9 +23,20 @@ import {
 const WeatherMap = dynamic(() => import('../weather/page'), { ssr: false })
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
+interface User {
+  id: string
+  name: string
+  email: string
+  role: string
+  xp: number
+  completedModules: string[]
+  timeSpentPerModule: { moduleId: string; timeSpent: number }[]
+}
+
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('Dashboard')
-  const [userName, setUserName] = useState('')
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
   const [completedModules, setCompletedModules] = useState(0)
   const [totalModules, setTotalModules] = useState(0)
   const [drills, setDrills] = useState<{ title: string; due: string }[]>([])
@@ -34,42 +45,83 @@ export default function DashboardPage() {
   const [topStudents, setTopStudents] = useState<{ name: string; xp: number }[]>([])
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    setUserName(user.name || 'Student')
-
-    const fetchDashboardData = async () => {
+    const fetchUserData = async () => {
       try {
-        const modulesRes = await fetch(`/api/dashboard/modules?userId=${user.id}`)
-        const modulesData = await modulesRes.json()
-        setTotalModules(modulesData.total)
-        setCompletedModules(modulesData.completed)
+        setLoading(true)
+        
+        // Check if user is logged in
+        const userFromStorage = localStorage.getItem('user')
+        if (!userFromStorage) {
+          // For testing purposes, create a demo user
+          const demoUser = {
+            id: 'demo-user-123',
+            name: 'Demo User',
+            email: 'demo@example.com',
+            role: 'student',
+            xp: 1500,
+            completedModules: [],
+            timeSpentPerModule: []
+          }
+          setUser(demoUser)
+          setLoading(false)
+          return
+        }
 
-        const drillsRes = await fetch(`/api/dashboard/drills?userId=${user.id}`)
-        const drillsData = await drillsRes.json()
-        setDrills(
-          drillsData.length
-            ? drillsData
-            : [
-                { title: 'Safety Drill', due: '2025-09-25' },
-                { title: 'Fire Drill', due: '2025-09-28' },
-              ]
-        )
+        const userData = JSON.parse(userFromStorage)
+        setUser(userData)
 
-        const xpRes = await fetch(`/api/dashboard/xp?userId=${user.id}`)
-        const xpData = await xpRes.json()
-        setXp(xpData.totalXp || 0)
-        setTimeSpentData(xpData.timeSpentPerModule || [])
+        // Fetch dashboard data
+        const modulesRes = await fetch(`/api/dashboard/modules?userId=${userData.id}`)
+        if (modulesRes.ok) {
+          const modulesData = await modulesRes.json()
+          setTotalModules(modulesData.total || 0)
+          setCompletedModules(modulesData.completed || 0)
+        }
+
+        const drillsRes = await fetch(`/api/dashboard/drills?userId=${userData.id}`)
+        if (drillsRes.ok) {
+          const drillsData = await drillsRes.json()
+          setDrills(drillsData || [])
+        }
+
+        const xpRes = await fetch(`/api/dashboard/xp?userId=${userData.id}`)
+        if (xpRes.ok) {
+          const xpData = await xpRes.json()
+          setXp(xpData.totalXp || 0)
+          setTimeSpentData(xpData.timeSpentPerModule || [])
+        }
 
         const topRes = await fetch(`/api/dashboard/top-students`)
-        const topData = await topRes.json()
-        setTopStudents(topData || [])
+        if (topRes.ok) {
+          const topData = await topRes.json()
+          setTopStudents(topData || [])
+        }
       } catch (err) {
         console.error('Error fetching dashboard data:', err)
+      } finally {
+        setLoading(false)
       }
     }
 
-    fetchDashboardData()
+    fetchUserData()
   }, [])
+
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-gray-100">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading dashboard...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null
+  }
 
   const renderContent = () => {
     switch (activeTab) {
@@ -139,7 +191,7 @@ export default function DashboardPage() {
               <div className="relative overflow-hidden bg-gradient-to-r from-red-500 to-red-600 rounded-3xl p-8 shadow-2xl">
                 <div className="relative z-10">
                   <h2 className="text-4xl font-bold text-white mb-2 font-['Inter']">
-                    Welcome back, {userName}! 👋
+                    Welcome back, {user.name}! 👋
                   </h2>
                   <p className="text-red-100 text-lg font-medium">
                     Ready to continue your learning journey?
@@ -176,28 +228,28 @@ export default function DashboardPage() {
                       <span className="text-white text-lg">⭐</span>
                     </div>
                   </div>
-                  <p className="text-3xl font-bold text-gray-800 mb-2">{xp.toLocaleString()}</p>
+                  <p className="text-3xl font-bold text-gray-800 mb-2">{(xp || 0).toLocaleString()}</p>
                   <p className="text-sm text-gray-500">Total XP Earned</p>
                   <div className="mt-3 bg-red-50 rounded-full h-2">
-                    <div className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full" style={{width: `${Math.min((xp / 10000) * 100, 100)}%`}}></div>
+                    <div className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full" style={{width: `${Math.min(((xp || 0) / 10000) * 100, 100)}%`}}></div>
                   </div>
                 </div>
 
-                {/* Next Drill Card */}
+                {/* Next Alert Card */}
                 <div className="bg-white rounded-2xl p-6 shadow-lg border border-red-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-gray-600 font-semibold text-sm uppercase tracking-wide">Next Drill</h3>
+                    <h3 className="text-gray-600 font-semibold text-sm uppercase tracking-wide">Next Alert</h3>
                     <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
                       <span className="text-orange-600 text-lg">🚨</span>
                     </div>
                   </div>
-                  {drills.length > 0 ? (
+                  {drills && drills.length > 0 ? (
                     <>
                       <p className="text-xl font-bold text-gray-800 mb-1">{drills[0].title}</p>
-                      <p className="text-sm text-gray-500">Due: {new Date(drills[0].due).toLocaleDateString()}</p>
+                      <p className="text-sm text-gray-500">Scheduled: {new Date(drills[0].due).toLocaleDateString()}</p>
                     </>
                   ) : (
-                    <p className="text-gray-500">No upcoming drills</p>
+                    <p className="text-gray-500">No upcoming alerts</p>
                   )}
                 </div>
 
@@ -250,7 +302,7 @@ export default function DashboardPage() {
                       <span className="text-sm text-red-600 font-medium cursor-pointer hover:text-red-700">View all</span>
                     </div>
                     <div className="space-y-4">
-                      {topStudents.length > 0 ? (
+                      {topStudents && topStudents.length > 0 ? (
                         topStudents.map((student, idx) => (
                           <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-red-50 transition-colors">
                             <div className="flex items-center space-x-3">
@@ -264,7 +316,7 @@ export default function DashboardPage() {
                               </div>
                               <span className="font-medium text-gray-800">{student.name}</span>
                             </div>
-                            <span className="font-bold text-red-600">{student.xp.toLocaleString()} XP</span>
+                            <span className="font-bold text-red-600">{(student.xp || 0).toLocaleString()} XP</span>
                           </div>
                         ))
                       ) : (
@@ -278,11 +330,11 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Upcoming Drills Section */}
+              {/* Upcoming Alerts Section */}
               <div className="bg-white rounded-2xl p-6 shadow-lg border border-red-100">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-bold text-gray-800">Upcoming Drills & Events</h3>
-                  <span className="text-sm text-red-600 font-medium cursor-pointer hover:text-red-700">View calendar</span>
+                  <h3 className="text-xl font-bold text-gray-800">Upcoming Alerts & Events</h3>
+                  <span className="text-sm text-red-600 font-medium cursor-pointer hover:text-red-700">View all alerts</span>
                 </div>
                 <UpcomingDrills drills={drills} />
               </div>
@@ -320,7 +372,7 @@ export default function DashboardPage() {
           </div>
         )
       case 'Profile':
-        return <ProfileCard />
+        return <ProfileCard user={user} />
       case 'Alerts':
         return (
           <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 p-8">
@@ -339,7 +391,7 @@ export default function DashboardPage() {
     <div className="flex h-screen bg-gray-100">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <div className="flex-1 flex flex-col">
-        <TopBar currentPage={activeTab} />
+        <TopBar currentPage={activeTab} user={user} />
         <main className="flex-1 overflow-auto">{renderContent()}</main>
       </div>
     </div>
