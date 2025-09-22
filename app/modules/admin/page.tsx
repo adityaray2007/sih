@@ -63,7 +63,6 @@ export default function CreateModulePage() {
     switch (type) {
       case 'text': return '📝'
       case 'image': return '🖼️'
-      case 'graph': return '📊'
       default: return '📄'
     }
   }
@@ -190,13 +189,6 @@ export default function CreateModulePage() {
                         <div className="text-2xl mb-2">🖼️</div>
                         <div className="text-sm font-medium text-gray-700">Image</div>
                       </button>
-                      <button
-                        onClick={() => addContentItem('graph')}
-                        className="p-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-red-400 hover:bg-red-50 transition-all text-center"
-                      >
-                        <div className="text-2xl mb-2">📊</div>
-                        <div className="text-sm font-medium text-gray-700">Graph</div>
-                      </button>
                     </div>
 
                     <div className="space-y-4">
@@ -223,21 +215,39 @@ export default function CreateModulePage() {
                               className="w-full"
                             />
                           ) : item.type === 'image' ? (
-                            <input
-                              type="url"
-                              value={item.data}
-                              onChange={(e) => updateContentItem(index, e.target.value)}
-                              placeholder="Enter image URL..."
-                              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                            />
-                          ) : item.type === 'graph' ? (
-                            <input
-                              type="text"
-                              value={item.data}
-                              onChange={(e) => updateContentItem(index, e.target.value)}
-                              placeholder="Enter graph description..."
-                              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                            />
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0]
+                                    if (!file) return
+                                    const formData = new FormData()
+                                    formData.append('file', file)
+                                    try {
+                                      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+                                      const data = await res.json()
+                                      if (res.ok && data.url) {
+                                        updateContentItem(index, data.url)
+                                      } else {
+                                        alert(data.error || 'Upload failed')
+                                      }
+                                    } catch (err) {
+                                      alert('Network error during upload')
+                                    }
+                                  }}
+                                  className="block w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
+                                />
+                              </div>
+                              <input
+                                type="url"
+                                value={item.data}
+                                onChange={(e) => updateContentItem(index, e.target.value)}
+                                placeholder="Or paste image URL..."
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                              />
+                            </div>
                           ) : null}
                         </div>
                       ))}
@@ -291,15 +301,11 @@ export default function CreateModulePage() {
                                             e.currentTarget.style.display = 'none'
                                           }}
                                         />
-                                        <p className="text-gray-400">Image URL: {item.data}</p>
+                                        <p className="text-gray-400">Image: {item.data}</p>
                                       </div>
                                     ) : (
                                       'No image URL provided'
                                     )}
-                                  </div>
-                                ) : item.type === 'graph' ? (
-                                  <div className="text-xs text-gray-500">
-                                    {item.data || 'No graph description provided'}
                                   </div>
                                 ) : null}
                               </div>
@@ -351,7 +357,7 @@ export default function CreateModulePage() {
                   <ul className="text-blue-700 text-sm space-y-1">
                     <li>• Start with a clear, descriptive title that tells students what they'll learn</li>
                     <li>• Write a comprehensive description explaining the module's objectives</li>
-                    <li>• Mix different content types (text, images, graphs) for better engagement</li>
+                    <li>• Mix different content types (text and images) for better engagement</li>
                     <li>• Structure content logically from basic concepts to advanced topics</li>
                     <li>• Use images to illustrate key concepts and make content more visual</li>
                   </ul>

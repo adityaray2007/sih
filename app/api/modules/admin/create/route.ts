@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
+import { connectToDatabase } from '@/lib/mongodb'
 import { Module } from '@/models/Module'
 
 export async function POST(req: Request) {
   try {
+    await connectToDatabase()
     const body = await req.json()
     const { title, description, content } = body
     if (!title) return NextResponse.json({ error: 'Title required' }, { status: 400 })
