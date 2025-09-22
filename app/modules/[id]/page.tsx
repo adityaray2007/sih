@@ -29,6 +29,8 @@ export default function ModulePage() {
   const [readingProgress, setReadingProgress] = useState(0)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [speechRate, setSpeechRate] = useState(1)
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
+  const [isTranslating, setIsTranslating] = useState(false)
   const activeTab = "modules"
 
   useEffect(() => {
@@ -58,6 +60,14 @@ export default function ModulePage() {
     fetchModule()
   }, [id])
 
+  // Initialize a random reading progress when module loads (until completed)
+  useEffect(() => {
+    if (moduleData && !completed) {
+      const randomProgress = Math.floor(10 + Math.random() * 80) // 10% - 90%
+      setReadingProgress(randomProgress)
+    }
+  }, [moduleData])
+
   // Cleanup speech when component unmounts or content changes
   useEffect(() => {
     return () => {
@@ -65,6 +75,17 @@ export default function ModulePage() {
         window.speechSynthesis.cancel()
       }
     }
+  }, [])
+
+  // Load available voices for language selection
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) return
+    const loadVoices = () => {
+      const v = window.speechSynthesis.getVoices()
+      if (v && v.length) setVoices(v)
+    }
+    loadVoices()
+    window.speechSynthesis.onvoiceschanged = loadVoices
   }, [])
 
   // Stop speech when content changes
@@ -99,6 +120,17 @@ export default function ModulePage() {
         setError('Failed to mark module as complete')
       } else {
         setCompleted(true)
+        try {
+          const key = 'recentlyCompletedModules'
+          const list = JSON.parse(localStorage.getItem(key) || '[]')
+          if (Array.isArray(list)) {
+            if (!list.includes(String(id))) {
+              localStorage.setItem(key, JSON.stringify([...list, String(id)]))
+            }
+          } else {
+            localStorage.setItem(key, JSON.stringify([String(id)]))
+          }
+        } catch {}
       }
     } catch {
       setError('Failed to mark module as complete')
@@ -129,6 +161,23 @@ export default function ModulePage() {
   }
 
   // Text-to-Speech Functions
+  const detectLang = (text: string) => {
+    // If contains Devanagari, use Hindi; else English
+    return /[\u0900-\u097F]/.test(text) ? 'hi-IN' : 'en-US'
+  }
+
+  const pickVoiceForLang = (lang: string) => {
+    if (!voices || voices.length === 0) return undefined
+    // Exact match first
+    let voice = voices.find(v => v.lang === lang)
+    if (voice) return voice
+    // Fallback by prefix
+    voice = voices.find(v => v.lang?.startsWith(lang.split('-')[0]))
+    if (voice) return voice
+    // final fallback undefined
+    return undefined
+  }
+
   const speakText = (text: string) => {
     if ('speechSynthesis' in window) {
       // Stop any current speech
@@ -138,12 +187,53 @@ export default function ModulePage() {
       utterance.rate = speechRate
       utterance.pitch = 1
       utterance.volume = 1
+      const lang = detectLang(text)
+      utterance.lang = lang
+      const v = pickVoiceForLang(lang)
+      if (v) utterance.voice = v
       
       utterance.onstart = () => setIsSpeaking(true)
       utterance.onend = () => setIsSpeaking(false)
       utterance.onerror = () => setIsSpeaking(false)
       
       window.speechSynthesis.speak(utterance)
+    }
+  }
+
+  // Translate current text content between English and Hindi (free public LibreTranslate instance)
+  const translateCurrent = async () => {
+    if (!moduleData) return
+    const current = moduleData.content[currentContentIndex]
+    if (!current || current.type !== 'text') return
+    const rawHtml = current.data || ''
+    const plain = rawHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    if (!plain) return
+    // Decide direction: if Hindi -> English, else English -> Hindi
+    const lang = detectLang(plain)
+    const source = lang === 'hi-IN' ? 'hi' : 'en'
+    const target = lang === 'hi-IN' ? 'en' : 'hi'
+
+    setIsTranslating(true)
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: plain, source, target, format: 'text' })
+      })
+      const data = await res.json()
+      if (!res.ok || !data?.translatedText) {
+        alert(data?.error || 'Translation failed')
+        return
+      }
+      const translated = String(data.translatedText)
+      const updated = { ...moduleData }
+      updated.content = [...moduleData.content]
+      updated.content[currentContentIndex] = { ...updated.content[currentContentIndex], data: `<p>${translated}</p>` }
+      setModuleData(updated)
+    } catch (e) {
+      alert('Network error during translation')
+    } finally {
+      setIsTranslating(false)
     }
   }
 
@@ -166,6 +256,13 @@ export default function ModulePage() {
       }
     }
   }
+
+  // Force progress bar to 100% when completed
+  useEffect(() => {
+    if (completed) {
+      setReadingProgress(100)
+    }
+  }, [completed])
 
   if (loading) {
     return (
@@ -244,12 +341,12 @@ export default function ModulePage() {
             <div className="bg-white rounded-2xl p-6 shadow-lg border border-red-100">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-gray-800">Reading Progress</h3>
-                <span className="text-red-600 font-semibold">{Math.round(readingProgress)}%</span>
+                <span className="text-red-600 font-semibold">{completed ? 100 : Math.round(readingProgress)}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div 
                   className="bg-gradient-to-r from-red-500 to-red-600 h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${readingProgress}%` }}
+                  style={{ width: `${completed ? 100 : readingProgress}%` }}
                 ></div>
               </div>
               <div className="flex justify-between text-sm text-gray-600 mt-2">
@@ -339,6 +436,18 @@ export default function ModulePage() {
                       <span>Stop</span>
                     </button>
                   )}
+                  <button
+                    onClick={translateCurrent}
+                    disabled={isTranslating}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${isTranslating ? 'bg-gray-200 text-gray-500' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
+                  >
+                    <span className="text-lg">🌐</span>
+                    <span>{(() => {
+                      const txt = (currentContent?.data || '').replace(/<[^>]*>/g, ' ').trim()
+                      const lang = /[\u0900-\u097F]/.test(txt) ? 'hi' : 'en'
+                      return isTranslating ? 'Translating…' : lang === 'hi' ? 'Translate to English' : 'Translate to Hindi'
+                    })()}</span>
+                  </button>
                 </div>
                 
                 <div className="flex items-center space-x-2">

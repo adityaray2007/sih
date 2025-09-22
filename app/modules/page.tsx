@@ -25,6 +25,7 @@ export default function ModulesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [user, setUser] = useState<{ role: string } | null>(null)
   const [deletingModule, setDeletingModule] = useState<string | null>(null)
+  const [randomProgressMap, setRandomProgressMap] = useState<Record<string, number>>({})
   const activeTab = "modules"
 
   useEffect(() => {
@@ -50,6 +51,14 @@ export default function ModulesPage() {
           const data2 = await res2.json()
           setCompleted(data2.completedModules || [])
         }
+
+        // Initialize stable random progress for each module (only for incomplete ones)
+        const map: Record<string, number> = {}
+        for (const m of (data.modules || [])) {
+          // 12% - 88% to avoid extremes
+          map[m._id] = Math.floor(12 + Math.random() * 76)
+        }
+        setRandomProgressMap(map)
       } catch (err) {
         console.error('Error fetching modules:', err)
       } finally {
@@ -58,6 +67,35 @@ export default function ModulesPage() {
     }
 
     fetchModules()
+  }, [])
+
+  // Treat recently completed modules as completed immediately (before server sync)
+  useEffect(() => {
+    try {
+      const key = 'recentlyCompletedModules'
+      const list = JSON.parse(localStorage.getItem(key) || '[]') as string[]
+      if (Array.isArray(list) && list.length) {
+        setCompleted(prev => Array.from(new Set([...(prev || []), ...list])))
+      }
+    } catch {}
+  }, [])
+
+  // Refresh completion state when window regains focus
+  useEffect(() => {
+    const onFocus = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (token) {
+          const res2 = await fetch('/api/modules/completed', {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          const data2 = await res2.json()
+          setCompleted(data2.completedModules || [])
+        }
+      } catch {}
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
   }, [])
 
   const getModuleIcon = (title: string) => {
@@ -299,7 +337,7 @@ export default function ModulesPage() {
                   const difficulty = getDifficultyLevel(module.content)
                   // Calculate progress based on content length and completion status
                   const contentLength = module.content.reduce((acc, item) => acc + (item.data?.length || 0), 0)
-                  const progress = isDone ? 100 : Math.min(85, Math.random() * 30 + 15) // More realistic progress range
+                  const progress = isDone ? 100 : (randomProgressMap[module._id] ?? 50)
                   
                   return (
                     <div key={module._id} className="bg-white rounded-2xl p-6 shadow-lg border border-red-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative overflow-hidden">
