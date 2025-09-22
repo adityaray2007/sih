@@ -24,6 +24,7 @@ export default function ModulesPage() {
   const [filter, setFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [user, setUser] = useState<{ role: string } | null>(null)
+  const [deletingModule, setDeletingModule] = useState<string | null>(null)
   const activeTab = "modules"
 
   useEffect(() => {
@@ -80,6 +81,43 @@ export default function ModulesPage() {
 
   const isTeacherOrAdmin = () => {
     return user && (user.role === 'teacher' || user.role === 'admin')
+  }
+
+  const handleDeleteModule = async (moduleId: string) => {
+    if (!confirm('Are you sure you want to delete this module? This action cannot be undone.')) {
+      return
+    }
+
+    setDeletingModule(moduleId)
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('Please log in to delete modules')
+        return
+      }
+
+      const response = await fetch(`/api/modules?moduleId=${moduleId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      const result = await response.json()
+      
+      if (response.ok) {
+        // Remove module from local state
+        setModules(modules.filter(module => module._id !== moduleId))
+        alert('Module deleted successfully')
+      } else {
+        alert(`Error: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error deleting module:', error)
+      alert('Error deleting module. Please try again.')
+    } finally {
+      setDeletingModule(null)
+    }
   }
 
   const filteredModules = modules.filter(module => {
@@ -264,13 +302,33 @@ export default function ModulesPage() {
                   const progress = isDone ? 100 : Math.min(85, Math.random() * 30 + 15) // More realistic progress range
                   
                   return (
-                    <Link key={module._id} href={`/modules/${module._id}`}>
-                      <div className="bg-white rounded-2xl p-6 shadow-lg border border-red-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer relative overflow-hidden">
-                        {isDone && (
-                          <div className="absolute top-4 right-4 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                            <span className="text-white text-sm font-bold">✓</span>
-                          </div>
-                        )}
+                    <div key={module._id} className="bg-white rounded-2xl p-6 shadow-lg border border-red-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative overflow-hidden">
+                      {/* Delete Button - Only for Teachers/Admins */}
+                      {isTeacherOrAdmin() && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleDeleteModule(module._id)
+                          }}
+                          disabled={deletingModule === module._id}
+                          className="absolute top-4 right-4 z-10 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white p-2 rounded-full transition-all duration-200 flex items-center justify-center"
+                        >
+                          {deletingModule === module._id ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <span className="text-sm">🗑️</span>
+                          )}
+                        </button>
+                      )}
+                      
+                      {isDone && (
+                        <div className={`absolute top-4 ${isTeacherOrAdmin() ? 'right-16' : 'right-4'} w-8 h-8 bg-green-500 rounded-full flex items-center justify-center`}>
+                          <span className="text-white text-sm font-bold">✓</span>
+                        </div>
+                      )}
+                      
+                      <Link href={`/modules/${module._id}`} className="block">
                         
                         <div className="flex items-start space-x-4 mb-4">
                           <div className="w-14 h-14 bg-gradient-to-r from-red-500 to-red-600 rounded-2xl flex items-center justify-center flex-shrink-0">
@@ -321,8 +379,8 @@ export default function ModulesPage() {
 
                         {/* Hover effect overlay */}
                         <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-red-600 opacity-0 hover:opacity-5 transition-opacity rounded-2xl"></div>
-                      </div>
-                    </Link>
+                      </Link>
+                    </div>
                   )
                 })}
               </div>

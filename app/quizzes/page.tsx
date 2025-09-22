@@ -18,9 +18,18 @@ export default function QuizzesPage() {
   const [selectedOptions, setSelectedOptions] = useState<{ [quizId: string]: number }>({})
   const [submittedQuizzes, setSubmittedQuizzes] = useState<{ [quizId: string]: boolean }>({})
   const [quizResults, setQuizResults] = useState<{ [quizId: string]: { correct: boolean, selectedOption: number } }>({})
+  const [user, setUser] = useState<{ role: string } | null>(null)
+  const [deletingQuiz, setDeletingQuiz] = useState<string | null>(null)
   const activeTab = "Quizzes"
 
   useEffect(() => {
+    // Get user data from localStorage
+    const userFromStorage = localStorage.getItem('user')
+    if (userFromStorage) {
+      const userData = JSON.parse(userFromStorage)
+      setUser(userData)
+    }
+
     const fetchQuizzes = async () => {
       try {
         const res = await fetch('/api/quizzes')
@@ -115,6 +124,47 @@ export default function QuizzesPage() {
     setSelectedOptions(newSelectedOptions)
     setSubmittedQuizzes(newSubmittedQuizzes)
     setQuizResults(newQuizResults)
+  }
+
+  const isTeacherOrAdmin = () => {
+    return user && (user.role === 'teacher' || user.role === 'admin')
+  }
+
+  const handleDeleteQuiz = async (quizId: string) => {
+    if (!confirm('Are you sure you want to delete this quiz? This action cannot be undone.')) {
+      return
+    }
+
+    setDeletingQuiz(quizId)
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('Please log in to delete quizzes')
+        return
+      }
+
+      const response = await fetch(`/api/quizzes?quizId=${quizId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      const result = await response.json()
+      
+      if (response.ok) {
+        // Remove quiz from local state
+        setQuizzes(quizzes.filter(quiz => quiz._id !== quizId))
+        alert('Quiz deleted successfully')
+      } else {
+        alert(`Error: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error deleting quiz:', error)
+      alert('Error deleting quiz. Please try again.')
+    } finally {
+      setDeletingQuiz(null)
+    }
   }
 
   return (
@@ -231,14 +281,36 @@ export default function QuizzesPage() {
                             )}
                           </div>
                         </div>
-                        {isSubmitted && (
-                          <button
-                            onClick={() => resetQuiz(quiz._id)}
-                            className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
-                          >
-                            Try Again
-                          </button>
-                        )}
+                        <div className="flex items-center space-x-2">
+                          {isSubmitted && (
+                            <button
+                              onClick={() => resetQuiz(quiz._id)}
+                              className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+                            >
+                              Try Again
+                            </button>
+                          )}
+                          {/* Delete Button - Only for Teachers/Admins */}
+                          {isTeacherOrAdmin() && (
+                            <button
+                              onClick={() => handleDeleteQuiz(quiz._id)}
+                              disabled={deletingQuiz === quiz._id}
+                              className="bg-red-600/80 hover:bg-red-700/80 disabled:bg-red-400/80 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center space-x-1"
+                            >
+                              {deletingQuiz === quiz._id ? (
+                                <>
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                  <span>Deleting...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>🗑️</span>
+                                  <span>Delete</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
 
