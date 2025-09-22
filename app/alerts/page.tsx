@@ -18,9 +18,18 @@ export default function AlertsPage() {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [user, setUser] = useState<{ role: string } | null>(null)
+  const [deletingAlert, setDeletingAlert] = useState<string | null>(null)
   const activeTab = "alerts"
     
   useEffect(() => {
+    // Get user data from localStorage
+    const userFromStorage = localStorage.getItem('user')
+    if (userFromStorage) {
+      const userData = JSON.parse(userFromStorage)
+      setUser(userData)
+    }
+
     const fetchAlerts = async () => {
       try {
         const res = await fetch('/api/alerts')
@@ -84,6 +93,47 @@ export default function AlertsPage() {
           badge: 'bg-blue-500 text-white',
           icon: 'bg-blue-100 text-blue-600'
         }
+    }
+  }
+
+  const isTeacherOrAdmin = () => {
+    return user && (user.role === 'teacher' || user.role === 'admin')
+  }
+
+  const handleDeleteAlert = async (alertId: string) => {
+    if (!confirm('Are you sure you want to delete this alert? This action cannot be undone.')) {
+      return
+    }
+
+    setDeletingAlert(alertId)
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('Please log in to delete alerts')
+        return
+      }
+
+      const response = await fetch(`/api/alerts?alertId=${alertId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      const result = await response.json()
+      
+      if (response.ok) {
+        // Remove alert from local state
+        setAlerts(alerts.filter(alert => alert._id !== alertId))
+        alert('Alert deleted successfully')
+      } else {
+        alert(`Error: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error deleting alert:', error)
+      alert('Error deleting alert. Please try again.')
+    } finally {
+      setDeletingAlert(null)
     }
   }
 
@@ -245,6 +295,21 @@ export default function AlertsPage() {
                   >
                     <div className={`absolute top-0 left-0 w-full h-1 ${styles.bg}`}></div>
                     
+                    {/* Delete Button - Only for Teachers/Admins */}
+                    {isTeacherOrAdmin() && (
+                      <button
+                        onClick={() => handleDeleteAlert(alert._id)}
+                        disabled={deletingAlert === alert._id}
+                        className="absolute top-4 right-4 z-10 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white p-2 rounded-full transition-all duration-200 flex items-center justify-center"
+                      >
+                        {deletingAlert === alert._id ? (
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <span className="text-sm">🗑️</span>
+                        )}
+                      </button>
+                    )}
+                    
                     <div className="p-6">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-start space-x-4">
@@ -270,7 +335,7 @@ export default function AlertsPage() {
                           </div>
                         </div>
 
-                        <div className="text-right">
+                        <div className={`text-right ${isTeacherOrAdmin() ? 'pr-12' : ''}`}>
                           <p className="text-sm font-medium text-gray-800 mb-1">
                             Priority: <span className="capitalize">{priority}</span>
                           </p>
