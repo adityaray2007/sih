@@ -165,7 +165,7 @@ const IndiaLandingPage = ({
   </div>
           {/* Headline */}
           <div className="absolute top-1/4 left-8 md:left-16 transform -translate-y-1/4">
-            <div className="text-left">
+            <div className="text-left">``
               <h1 className="text-5xl md:text-8xl font-black leading-tight mb-4">
                 <div className="text-white">DISASTER</div>
                 <div className="text-white -mt-2 md:-mt-3">PREPAREDNESS</div>

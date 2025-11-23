@@ -7,6 +7,7 @@ import TopBar from '@/app/dashboard/components/Topbar'
 export default function DisAleartPage() {
   const [alerts, setAlerts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+    const [activeTab, setActiveTab] = useState("Disaster Alerts")
 
   useEffect(() => {
     async function load() {
@@ -27,7 +28,7 @@ export default function DisAleartPage() {
     <div className="flex min-h-screen bg-white text-black">
       <Sidebar />
       <div className="flex-1 flex flex-col">
-        <TopBar />
+        <TopBar currentPage={activeTab} />
         <main className="p-6 max-w-4xl mx-auto space-y-4">
           <h2 className="text-2xl font-bold">Live Disaster & Weather Alerts</h2>
           {loading && <p>Loading...</p>}
