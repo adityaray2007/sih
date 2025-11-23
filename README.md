@@ -140,19 +140,17 @@ npm run dev
 
 ---
 
-# 💫 Built With ❤️ By Detectives  
+# 💫 Built With ❤️ By Ctrl Freaks
 Made with ☕, 🤝 teamwork, and a lot of 🚀 innovation.
 
 ### 👥 Team Members  
-- **Aditya Ray** — Full Stack Developer & System Architect (Team Lead)  
-- **Akarsh Tyagi** — Backend Developer & Auth Systems  
-- **Shantanu Kumar** — Frontend UI/UX Developer  
-- **Aditya Sinha** — Backend + Database Management  
-- **Aditya Ray** — API Integrations & Testing  
+- **Aditya Ray**   
+- **Aditya Raj**   
+- **Aatyasha Sharma**  
+- **Prakhar Gupta**  
+- **Prashan mishra**  
+- **Prateek Narang**
 
-### 🎓 Mentor  
-**[Mentor Name]**, Assistant Professor  
-Bennett University  
 
 ---
 
